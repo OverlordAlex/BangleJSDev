@@ -1,3 +1,8 @@
+// TODO
+//  month as string
+// turn into app
+// quiet hours
+
 const colorMap = {
     "black": 0,
     "blue": 9,
@@ -9,118 +14,162 @@ const colorMap = {
     "white": 15
 };
 
-var letters = [];
-numLetters = 90-47;
-for (let chr = 0; chr < numLetters; chr++) {
-  var letter = Graphics.createArrayBuffer(8, 8, 1, {msb: true}).setFontVector(8);
-  letter.drawString(String.fromCharCode(47 + chr), 0, 0);
-  letterImg = {width: 8, height: 8, buffer: letter.buffer};
-  letters.push(letterImg);
-}
-
 const lcdTime = [
-  [[8, 0], [0, 8], [0, 16], [0, 24], [16, 8], [16, 16], [16, 24], [8, 32]],
-  [[8, 0], [8, 8], [8, 16], [8, 24], [8, 32]],
-  [[0, 0], [8, 0], [16, 0], [16, 8], [0, 16], [8, 16], [16, 16], [0, 24], [0, 32], [8, 32], [16, 32]],
-  [[0, 0], [8, 0], [16, 0], [16, 8], [0, 16], [8, 16], [16, 16], [16, 24], [0, 32], [8, 32], [16, 32]],
-  [[0, 0], [0, 8], [0, 16], [8, 16], [16, 0], [16, 8], [16, 16], [16, 24], [16, 32]],
-  [[0, 0], [8, 0], [16, 0], [0, 8], [0, 16], [8, 16], [16, 16], [16, 24], [0, 32], [8, 32], [16, 32]],
-  [[0, 0], [8, 0], [16, 0], [0, 8], [0, 16], [8, 16], [16, 16], [0, 24], [16, 24], [0, 32], [8, 32], [16, 32]],
-  [[0, 0], [8, 0], [16, 0], [16, 8], [16, 16], [16, 24], [16, 32]],
-  [[0, 0], [8, 0], [16, 0], [0, 8], [16, 8], [0, 16], [8, 16], [16, 16], [0, 24], [16, 24], [0, 32], [8, 32], [16, 32]],
-  [[0, 0], [8, 0], [16, 0], [0, 8], [16, 8], [0, 16], [8, 16], [16, 16], [16, 24], [16, 32]],
-  [[8, 8], [8, 24]]
+    [[8, 0], [0, 8], [0, 16], [0, 24], [16, 8], [16, 16], [16, 24], [8, 32]],
+    [[8, 0], [8, 8], [8, 16], [8, 24], [8, 32]],
+    [[0, 0], [8, 0], [16, 0], [16, 8], [0, 16], [8, 16], [16, 16], [0, 24], [0, 32], [8, 32], [16, 32]],
+    [[0, 0], [8, 0], [16, 0], [16, 8], [0, 16], [8, 16], [16, 16], [16, 24], [0, 32], [8, 32], [16, 32]],
+    [[0, 0], [0, 8], [0, 16], [8, 16], [16, 0], [16, 8], [16, 16], [16, 24], [16, 32]],
+    [[0, 0], [8, 0], [16, 0], [0, 8], [0, 16], [8, 16], [16, 16], [16, 24], [0, 32], [8, 32], [16, 32]],
+    [[0, 0], [8, 0], [16, 0], [0, 8], [0, 16], [8, 16], [16, 16], [0, 24], [16, 24], [0, 32], [8, 32], [16, 32]],
+    [[0, 0], [8, 0], [16, 0], [16, 8], [16, 16], [16, 24], [16, 32]],
+    [[0, 0], [8, 0], [16, 0], [0, 8], [16, 8], [0, 16], [8, 16], [16, 16], [0, 24], [16, 24], [0, 32], [8, 32], [16, 32]],
+    [[0, 0], [8, 0], [16, 0], [0, 8], [16, 8], [0, 16], [8, 16], [16, 16], [16, 24], [16, 32]],
+    [[8, 8], [8, 24]]
 ];
 
-function drawLCDtimeSegment(onBuffer, x, y, num, colorChance) {
-  for (i=lcdTime[num].length-1; i>=0; i--) {
-    rand = Math.random();
-    color = rand < (colorChance+0.02) ? colorMap.cyan : colorMap.green;
-    letter = rand < (colorChance+0.02) ? letters[num+1] : letters[1 + Math.floor(rand * 10)];
-    onBuffer.setColor(color).drawImage(letter, x + lcdTime[num][i][0], y + lcdTime[num][i][1]);
-  }
+function drawLCDtimeSegment(onBuffer, x, y, numberToDraw, colorChance) {
+    for (var i = lcdTime[numberToDraw].length - 1; i >= 0; i--) {
+        const ltr = Graphics.createArrayBuffer(4, 6, 1, {msb: true});
+        const rand = Math.random();
+        const color = rand < (colorChance+0.05) ? colorMap.cyan : colorMap.green;
+        const letter = rand < (colorChance+0.05) ? ltr.drawString(numberToDraw, 0, 0, true) : ltr.drawString(String.fromCharCode(37 + Math.floor(rand*25)), 0, 0, true);
+        onBuffer.setColor(color).drawImage(ltr, x + lcdTime[numberToDraw][i][0], y + lcdTime[numberToDraw][i][1]);
+    }
 }
 
-function drawLCDtime(onBuffer, h, m, colorChance) {
-  drawLCDtimeSegment(onBuffer, 14, 72, Math.floor(h / 10), colorChance);
-  drawLCDtimeSegment(onBuffer, 46, 72, h % 10, colorChance);
+function drawLCDtime(hours, mins, colorChance) {
+    const screen = Graphics.createArrayBuffer(176, 176, 4, {msb: true});
 
-  drawLCDtimeSegment(onBuffer, 78, 72, 10, colorMap.cyan);
+    drawLCDtimeSegment(screen, 14, 72, Math.floor(hours / 10), colorChance);
+    drawLCDtimeSegment(screen, 46, 72, hours % 10, colorChance);
 
-  drawLCDtimeSegment(onBuffer, 110, 72, Math.floor(m / 10), colorChance);
-  drawLCDtimeSegment(onBuffer, 142, 72, m % 10, colorChance);
+    drawLCDtimeSegment(screen, 78, 72, 10, colorMap.cyan);
+
+    drawLCDtimeSegment(screen, 110, 72, Math.floor(mins / 10), colorChance);
+    drawLCDtimeSegment(screen, 142, 72, mins % 10, colorChance);
+
+    return screen;
+}
+
+function createTrailOption() {
+    const rand = Math.random();
+
+    // unroll loop
+    const rng = 25;
+    var chrx = Math.floor(rand * rng);
+
+    var ltrs = Graphics.createArrayBuffer(4, 36, 4, {msb: true});
+    ltrs.setColor(colorMap.cyan).drawString(String.fromCharCode(37 + chrx), 0, 30, true);
+
+    var strx = String.fromCharCode(37 + chrx) + '\n';
+    chrx = (chrx + chrx) % rng;
+    strx += String.fromCharCode(37 + chrx) + '\n';
+    chrx = (chrx + chrx) % rng;
+    strx += String.fromCharCode(37 + chrx) + '\n';
+    chrx = (chrx + chrx) % rng;
+    strx += String.fromCharCode(37 + chrx) + '\n';
+    chrx = (chrx + chrx) % rng;
+    strx += String.fromCharCode(37 + chrx);
+
+    ltrs.setColor(colorMap.green).drawString(strx, 0, 0, true);
+    return ltrs;
 }
 
 
-maxTrailLength = 6;
-trailSpeed = 4;
+trailOpts=[];
+for (var i = 0; i < 3; i++) {
+    trailOpts.push(createTrailOption());
+}
 
 class trail {
-  constructor(x, y) {
-    this.x = x;
-    this.y = y;
-    this.speed = Math.floor(Math.random()*trailSpeed)+4;
-    this.length = 1;
-  }
-
-  draw(onBuffer) {
-    this.y += this.speed;
-    this.length = Math.max(this.length++, maxTrailLength);
-    for (chr = 1; chr < this.length; chr++) {
-      letter = letters[Math.floor(Math.random() * numLetters)];
-      // draw upwards
-      onBuffer.setColor(colorMap.green).drawImage(letter, this.x, this.y - (chr*8));
+    constructor(x, y) {
+        const rand = Math.random();
+        this.x = x;
+        this.y = y;
+        this.speed = Math.floor(rand * 8) + 10;
+        this.idx = Math.floor(rand * 3);
     }
-    onBuffer.setColor(colorMap.cyan).drawImage(letter, this.x, this.y);
-  }
+
+    draw(onBuffer) {
+        onBuffer.drawImage(trailOpts[this.idx], this.x, this.y);
+        this.y = this.y + this.speed;
+        this.idx = (this.idx + 1) % 3;
+    }
 }
 
 function drawClock() {
-  // 176 x 176 pixels, 3 color bits (must set msb)
-  var screen = Graphics.createArrayBuffer(176, 176, 4, {msb: true});
+    process.memory();
+    trails=[];
+    for (i = 0; i < 30; i++) {
+        trails.push(new trail(i * 6, Math.floor(Math.random() * 32)));
+    }
 
-  screen.setBgColor(0, 0 , 0);
-  //screen.clear();
+    var date = new Date();
+    var hours = date.getHours(), minutes = date.getMinutes();
 
+    const weekday = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const datestring =  weekday[date.getDay()] + " " + date.getDate()  + "/" + (date.getMonth() + 1) ;
+    const battery = E.getBattery() + "%";
 
-  /*for (i = 0; i < 176/8; i++) {
-    img = {width: 8, height: 8, buffer: letters[i]};
-    //screen.setBgColor(1, 0, 1);
-    screen.setColor(colorMap.green).drawImage(img, i*8, 0);
-    //screen.setColor(7).drawImage(img, i*8+1, 1);
-    //screen.drawImage(letters[i], i*8, 0);
-  }*/
-  
-  /*img = {width: 176, height: 176, bpp: 4, buffer: screen.buffer, palette: paletteMap};
-  g.clear();
-  g.drawImage(img, 0, 0);*/
-  //g.setColor(255, 0, 0).drawLine(0, 0, 50, 50);
-  //g.drawImage(letters[0], 0, 0);
-  
-  numTrails = 100;
-  trails= [];
-  for (i=0; i<numTrails; i++) {
-    var trl = new trail(Math.floor(Math.random()*172), Math.floor(Math.random()*16));
-    trails.push(trl);
-  }
+    const lcds = [
+        drawLCDtime(hours, minutes, 0.2),
+        drawLCDtime(hours, minutes, 0.4),
+        drawLCDtime(hours, minutes, 0.6),
+        drawLCDtime(hours, minutes, 0.8),
+        drawLCDtime(hours, minutes, 1)
+    ];
 
-  maxIter = 60;
-  clockShow = 20;
-  for (j = 0; j < maxIter; j++) {
-    setTimeout(function (iter) {
-      screen.clear();
-      for (i=0; i<numTrails; i++) {
-        trails[i].draw(screen);
-      }
-      if (iter > clockShow) {
-        drawLCDtime(screen, 12, 34, iter/maxIter);
-      }
-      
-      Bangle.setLCDOverlay(screen, 0, 0);
-    }, 50*j, j);
-  }
+    // 176 x 176 pixels, 3 color bits (must set msb)
+    var screen = Graphics.createArrayBuffer(176, 176, 4, {msb: true});
 
-  Bangle.setLCDOverlay(screen, 0, 0);
+    const maxIter = 30;
+    const clockShow = 8;
+    var iteration = 0;
+
+    g.clear();
+    const drawScreenIter = setInterval(function() {
+        iteration++;
+        screen.clear();
+        if (iteration > clockShow) {
+                screen.drawImage(lcds[Math.ceil(iteration/maxIter * 5)], 0, 0);
+                screen.setFont6x15().setColor(colorMap.cyan).drawString(datestring, 10, 10);
+                screen.setFont6x15().setColor(colorMap.cyan).drawString(battery, 145, 155);
+        }
+        for (var trail of trails) {
+            trail.draw(screen);
+        }
+        Bangle.setLCDOverlay(screen, 0, 0);
+        if (iteration > maxIter) {
+            clearInterval();
+            clearTimeout();
+            trails = null;
+            screen = null;
+            //process.memory(true);
+        }
+    }, 200);
+
+    setTimeout(function (interToCancel) {
+        clearInterval(interToCancel);
+        trails = null;
+        screen = null;
+    }, 6000, drawScreenIter); // 30 iterations, * 200ms = 5800
+
 }
 
-drawClock();
+var drawing = false;
+Bangle.on("lock", (locked) => {
+    if (!locked && !drawing) {
+        g.clear();
+        drawing = true;
+        drawClock();
+        process.memory();
+    } else if (locked) {
+        clearInterval();
+    }
+    drawing = false;
+});
+
+Bangle.loadWidgets();
+Bangle.setUI("clock");
+//drawClock();
