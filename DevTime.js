@@ -1,4 +1,18 @@
-// Built using: https://www.espruino.com/ide/#
+/* Shown on the screen:
+# paradiseWatch.toml
+[movement]
+  steps = 16 / 3620
+  bpm = 0 / [0, 0, 0] / 0
+[meteorological]
+  altitude = 125.8  [../]
+  pressure = 998.229  [\..]
+[metadata]
+  time = 15 : 26
+  date = Wed 17 Apr, 2024
+  battery = 93%
+*/
+
+// Build using: https://www.espruino.com/ide/#
 /* Deploy:
 save file to paradisetoml.app.js in device storage
     then in console:
@@ -14,12 +28,11 @@ require("Storage").write("paradisetoml.info",{
 // TODO
 //    raname application (check if DevTimeTOML is available?
 //    code:
-//        create method to draw with syntax highlighting
 //        failed promise on reading Pressure does nothing
 //    upload app to store and make it official
 //    screen should not update every minute during sleep hours
 //        should the screen update slower than every minute? - battery to be monitored first
-//    tests, including performance (speed+memory)
+//    tests, including performance (speed+memory - currently ~76ms per render with ~700bytes in memory)
 //    Investigate potential alternative display formats (currently TOML)
 //        JSON
 //        markdown
@@ -66,11 +79,58 @@ function recalculateMinMaxBPM() {
     }
 }
 
+function drawMovementSection(x, y, healthString, bpmString) {
+    g.setColor(1, 0.5, 0).drawString("[movement]", x, y);
+
+    g.setColor(0, 1, 1).drawString("steps", x + 12, y + 15);
+    g.setColor(1, 1, 1).drawString("=", x + 48, y + 15);
+    g.setColor(0.5, 1, 0).drawString(healthString, x + 60, y + 15);
+
+    g.setColor(0, 1, 1).drawString("bpm", x + 12, y + 30);
+    g.setColor(1, 1, 1).drawString("=", x + 36, y + 30);
+    g.setColor(1, 1, 1).drawString(bpmString, x + 48, y + 30);
+
+    return 3;
+}
+
+function drawMeteorologicalSection(x, y, altitudeString, pressureString) {
+    g.setColor(1, 0.5, 0).drawString("[meteorological]", x, y);
+
+    g.setColor(0, 1, 1).drawString("altitude", x + 12, y + 15);
+    g.setColor(1, 1, 1).drawString("=", x + 66, y + 15);
+    g.setColor(0, 1, 0).drawString(altitudeString, x + 78, y + 15);
+
+    g.setColor(0, 1, 1).drawString("pressure", x + 12, y + 30);
+    g.setColor(1, 1, 1).drawString("=", x + 66, y + 30);
+    g.setColor(0, 1, 0).drawString(pressureString, x + 78, y + 30);
+
+    return 3;
+}
+
+function drawMetadataSection(x, y, timeString, datestring) {
+    g.setColor(1, 0.5, 0).drawString("[metadata]", x, y);
+
+    g.setColor(0, 1, 1).drawString("time", x + 12, y + 15);
+    g.setColor(1, 1, 1).drawString("=", x + 42, y + 15);
+    g.setColor(1, 1, 1).drawString(timeString, x + 54, y + 15);
+
+    g.setColor(0, 1, 1).drawString("date", x + 12, y + 30);
+    g.setColor(1, 1, 1).drawString("=", x + 42, y + 30);
+    g.setColor(0.5, 1, 0).drawString(datestring, x + 54, y + 30);
+
+    g.setColor(0, 1, 1).drawString("battery", x + 12, y + 45);
+    g.setColor(1, 1, 1).drawString("=", x + 58, y + 45);
+    g.setColor(0, 1, 0).drawString(E.getBattery() + "%", x + 70, y + 45);
+
+    return 4;
+}
+
 /**
  * Given an updated pressure reading, draw the watchface.
  */
 function draw(pressureReading) {
-    if (pressureReading === 'undefined') {
+    if (pressureReading === "undefined") {
+        // protect against broken promises TODO: investigate why this happens
         return;
     }
 
@@ -128,32 +188,37 @@ function draw(pressureReading) {
     // example: "Wed 17 Apr, 2024"
     let datestring = weekdayStrings[now.getDay()] + " " + now.getDate() + " " + monthStrings[now.getMonth()] + ", " + now.getFullYear();
 
-    // TODO: create method to draw with syntax highlighting
-    var renderString = [
-        "# paradiseWatchface.toml",
-        "[movement]",
-        "  steps = " + healthPerTenMin.steps + " / " + healthPerDay.steps,
-        "  bpm = " + bpmString,
-        "[meteorological]",
-        "  altitude = " + altitudeString,
-        "  pressure = " + pressureString,
-        "[metadata]",
-        "  time = " + timeString,
-        "  date = " + datestring,
-        "  battery = " + E.getBattery() + "%",
-    ].join("\n");
-
     g.reset();
-    g.setBgColor(0,0,0);
-    g.clear();
-    g.setFont("6x15"); // g.getFonts for options
-    g.setColor(1, 1, 1);
-
-    // aling top-left
-    g.setFontAlign(-1, -1);
+    g.setBgColor(0,0,0).clear();
+    // note this means width x height is 6 x 15
+    //     use g.getFonts for options
+    g.setFont("6x15");
 
     // small offset for A E S T H E T I C S
-    g.drawString(renderString, 5, 5, false);
+    let xOffset = 5;
+    let yOffset = 5;
+    var numLines = 0;
+
+    // draw comment/name at the start
+    g.setColor(0, 1, 0).drawString("# paradiseWatch.toml", xOffset, yOffset);
+    numLines++;
+
+    numLines += drawMovementSection(
+        xOffset,
+        yOffset + numLines*15,
+        healthPerTenMin.steps + " / " + healthPerDay.steps,
+        bpmString);
+
+    numLines += drawMeteorologicalSection(
+        xOffset,
+        yOffset + numLines*15,
+        altitudeString,
+        pressureString);
+
+    numLines += drawMetadataSection(xOffset,
+                        yOffset + numLines*15,
+                        timeString,
+                        datestring);
 }
 
 // Show launcher when middle button pressed
@@ -165,4 +230,4 @@ let redrawClockEveryMinute = setInterval(function performDraw() {
     // TODO: failed promise on reading Pressure does nothing
     // Note: promise for Pressure can take up to 1s to resolve
     Bangle.getPressure().then(draw, _=>{});
-}, 60000); 
+}, 60000);
