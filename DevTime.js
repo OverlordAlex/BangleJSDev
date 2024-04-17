@@ -12,13 +12,14 @@ require("Storage").write("paradisetoml.info",{
 */
 
 // TODO
-//    raname application (check if DevTimeToml is available?
+//    raname application (check if DevTimeTOML is available?
 //    code:
 //        create method to draw with syntax highlighting
 //        failed promise on reading Pressure does nothing
 //    upload app to store and make it official
 //    screen should not update every minute during sleep hours
 //        should the screen update slower than every minute? - battery to be monitored first
+//    tests, including performance (speed+memory)
 //    Investigate potential alternative display formats (currently TOML)
 //        JSON
 //        markdown
@@ -43,7 +44,7 @@ var bpmHistory = new Array(48);
 var bpmLastThreeReadings = [0, 0, 0];
 
 // BPM is updated every 10 minutes, track to make sure we only get changed data without missing identical readings
-var lastBPMUpdate = new Date();
+var lastBPMUpdate = new Date(0);
 
 /**
  * When the old min/max value has slid out of the window then we need to look at the entire history to find the new one.
@@ -69,11 +70,15 @@ function recalculateMinMaxBPM() {
  * Given an updated pressure reading, draw the watchface.
  */
 function draw(pressureReading) {
-    const now = new Date();
+    if (pressureReading === 'undefined') {
+        return;
+    }
+
+    let now = new Date();
 
     // .getHealthStatus returns {movement, steps, bpm, bpmConfidence}
-    const healthPerDay = Bangle.getHealthStatus("day");
-    const healthPerTenMin = Bangle.getHealthStatus("last");
+    let healthPerDay = Bangle.getHealthStatus("day");
+    let healthPerTenMin = Bangle.getHealthStatus("last");
 
     // health data is recorded every 10minutes - we want to avoid recording updates when data has not changed
     //     10 minutes = 600000 milliseconds
@@ -100,28 +105,33 @@ function draw(pressureReading) {
         bpmLastThreeReadings.push(healthPerTenMin.bpm);
         bpmLastThreeReadings.shift();
 
-        lastBPMUpdate = date;
+        lastBPMUpdate = now;
     }
-    const bpmString = bpmMin + " / [" + bpmLastThreeReadings.join(", ") + "] / " + bpmMax;
+    // example: "62 / [79, 76, 78] / 158"
+    let bpmString = bpmMin + " / [" + bpmLastThreeReadings.join(", ") + "] / " + bpmMax;
 
     // record whether altitude/pressure is increasing or decreasing, and display with simple ascii
-    const altitudeChange = (pressureReading.altitude > lastAltitude) ? "[../]" : "[\\..]";
+    // example: "109.6  [../]"
+    let altitudeChange = (pressureReading.altitude > lastAltitude) ? "[../]" : "[\\..]";
     lastAltitude = pressureReading.altitude;
-    const altitudeString = pressureReading.altitude.toFixed(1) + "  " + altitudeChange;
+    let altitudeString = pressureReading.altitude.toFixed(1) + "  " + altitudeChange;
 
-    const pressureChange = (pressureReading.pressure > lastPressure) ? "[../]" : "[\\..]";
+    // example: "1000.154 [\..]"
+    let pressureChange = (pressureReading.pressure > lastPressure) ? "[../]" : "[\\..]";
     lastPressure = pressureReading.pressure;
-    const pressureString = pressureReading.pressure.toFixed(3) + "  " + pressureChange;
+    let pressureString = pressureReading.pressure.toFixed(3) + "  " + pressureChange;
 
-    const hours = now.getHours(), minutes = now.getMinutes();
-    const timeString = now.getHours().toString().padStart(2, 0) + " : " + now.getMinutes().toString().padStart(2, 0);
+    // example: "12 : 54"
+    let hours = now.getHours(), minutes = now.getMinutes();
+    let timeString = now.getHours().toString().padStart(2, 0) + " : " + now.getMinutes().toString().padStart(2, 0);
 
-    const datestring = weekdayStrings[now.getDay()] + " " + now.getDate() + " " + monthStrings[now.getMonth()] + ", " + now.getFullYear();
+    // example: "Wed 17 Apr, 2024"
+    let datestring = weekdayStrings[now.getDay()] + " " + now.getDate() + " " + monthStrings[now.getMonth()] + ", " + now.getFullYear();
 
     // TODO: create method to draw with syntax highlighting
-    var drawString = [
+    var renderString = [
         "# paradiseWatchface.toml",
-        "[health]",
+        "[movement]",
         "  steps = " + healthPerTenMin.steps + " / " + healthPerDay.steps,
         "  bpm = " + bpmString,
         "[meteorological]",
@@ -134,23 +144,25 @@ function draw(pressureReading) {
     ].join("\n");
 
     g.reset();
+    g.setBgColor(0,0,0);
+    g.clear();
     g.setFont("6x15"); // g.getFonts for options
+    g.setColor(1, 1, 1);
 
     // aling top-left
     g.setFontAlign(-1, -1);
 
     // small offset for A E S T H E T I C S
-    g.drawString(drawString, 5, 5, true);
+    g.drawString(renderString, 5, 5, false);
 }
 
 // Show launcher when middle button pressed
 Bangle.setUI("clock");
 
 // draw immediately, then once per minute
-g.clear();
 Bangle.getPressure().then(draw, _=>{});
-var redrawClockEveryMinute = setInterval(function performDraw() {
+let redrawClockEveryMinute = setInterval(function performDraw() {
     // TODO: failed promise on reading Pressure does nothing
     // Note: promise for Pressure can take up to 1s to resolve
     Bangle.getPressure().then(draw, _=>{});
-}, 60000);
+}, 60000); 
