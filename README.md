@@ -2,7 +2,7 @@ Repository containing watch faces, widgets, and apps for the BangleJS 2
 
 # DevTime.js
 
-![devtime.js watchface screenshot from emulator](linktoimage)
+![devtime.js watchface screenshot from emulator](https://github.com/OverlordAlex/BangleJSDev/blob/main/paradiseToml.png)
 
 Static - a syntax-highlighted TOML formatted file which is actually the watch data
 
