@@ -1,6 +1,14 @@
-# Repository containing watch faces, widgets, and apps for the BangleJS 2
+Repository containing watch faces, widgets, and apps for the BangleJS 2
 
-License to be checked, but I believe MIT
+# DevTime.js
+
+![devtime.js watchface screenshot from emulator](linktoimage)
+
+Static - a syntax-highlighted TOML formatted file which is actually the watch data
+
+# Matrix.js
+
+Animated - green characters fall, leaving behind the time in cyan.
 
 ## Useful Links
 // REFERENCE MANUAL
