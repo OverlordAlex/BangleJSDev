@@ -14,10 +14,10 @@ require("Storage").write("scrolltime.info",{
 });
 */
 
-// TODO: setup averages and display top left
-// TODO: right screen - steps, step data, + calorie calculation!
+// TODO: fix average and resting BPM on left
 // TODO: minimize bytes with 1char globals
 // TODO jit/compile
+// TODO: storage.save 
 
 const heartImg = {
   width : 15, height : 15, bpp : 4,
@@ -141,14 +141,21 @@ let health = function(info) {
     steps.unshift(info.steps);
     stepTotal += stepLast;
 
-    // TODO take heartrate into account?
-    if (steps > 150) {
+    // TODO better??
+    if (stepLast > 300) {
         // assume METS 3.5
-    } else if (steps > 100) {
+        stepCalDay += 18.375;
+    } else if (stepLast > 200) {
         // assume METS 3 -- https://bjsm.bmj.com/content/52/12/776
-    } else if (steps > 60) {
+        stepCalDay += 15.75;
+    } else if (stepLast > 50) {
         // assume METS 2
+        stepCalDay += 10.5;
+    } else {
+        stepCalDay += 5.25;
     }
+    // https://www.omnicalculator.com/sports/calories-burned-by-heart-rate
+    bpmCalDay += (1.8927 * bpmLast - 85.6824) / 4.184;
 
     // record the new value, and update the sliding min/max indexes accordingly
     bpm.unshift(bpmLast);
@@ -261,34 +268,37 @@ let updateR = function() {
     }
 
     rScreen.setColor(1, 1, 1).setFont("Vector", 35).setFontAlign(1, -1, 0).drawString(stepTotal, appRect.w, 8)
-        .setFont("Vector", 22).drawString((stepTotal*0.00080).toFixed(1) + "km", appRect.w, 45);
+    .setFont("Vector", 22).drawString((stepTotal*0.00080).toFixed(1) + "km", appRect.w, 45)
+    .drawString("cal", appRect.w - 1, appRect.h - 42);
+
+    rScreen.setFontAlign(1, 1, 0).setColor(1, 0, 0).drawString(bpmCalDay.toFixed(), appRect.w - 32, appRect.h - 2)
+    .setColor(0, 1, 0).drawString(stepCalDay.toFixed(), appRect.w - 32, appRect.h - 32);
 };
 
 let draw = function() {
     screen = 0;
     updateC();
-    updateL();
-    updateR();
     update(0);
 };
 
 // draw on unlock
-Bangle.on('lock', (locked, reason) => { if (!locked) draw(); });
-
-// 100 steps upper limit?
+Bangle.on('lock', (locked, reason) => {
+    if (!locked) {
+        updateL();
+        updateR();
+        draw();
+    }
+});
 
 //////////////////////////////////
 //bpm=bpm.map(()=>Math.floor(Math.random()*100+60));
-steps=steps.map(()=>Math.floor(Math.random()*500));
+/*steps=steps.map(()=>Math.floor(Math.random()*500));
 bpmAvg = bpm.reduce((accumulator, currentValue) => accumulator + currentValue/24, 0);
-bpm[1]=169;
-steps[0]=4500;
-stepTotal=5512;
-minMaxBPM();
-for (let i = 0; i < 100; i++) {
-    health({steps:13, bpm:i});
-}
-
+stepTotal=0;
+minMaxBPM();*/
+/*for (let i = 0; i < 10; i++) {
+    health({steps:100, bpm:100});
+}*/
 /////////////////////////////////
 
 draw();
