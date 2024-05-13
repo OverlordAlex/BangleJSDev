@@ -1,5 +1,7 @@
 const graph = require("graph");
 const appRect = Bangle.appRect;
+// TODO replace - not using widgets so can be static
+// { "x": 0, "y": 0, "w": 176, "h": 176, "x2": 175, "y2": 175 }
 
 // Build using: https://www.espruino.com/ide/#
 /* Deploy:
@@ -11,9 +13,9 @@ require("Storage").write("scrolltime.info",{
 "name":"ScrollTime",
 "type":"clock",
 "src":"scrolltime.app.js"
-});
-*/
+});*/
 
+// TODO typed arrays
 // TODO: fix average and resting BPM on left
 // TODO: minimize bytes with 1char globals
 // TODO jit/compile
@@ -85,7 +87,7 @@ Bangle.on('swipe', (directionLR, directionUD) => {
     }
 });
 
-var bpm = new Array(24).fill(0);
+var bpm = new Array(24).fill(60);
 var bpmLast = 80;
 var bpmMax = -1;
 var bpmMaxIndex = 23;
@@ -296,9 +298,16 @@ Bangle.on('lock', (locked, reason) => {
 bpmAvg = bpm.reduce((accumulator, currentValue) => accumulator + currentValue/24, 0);
 stepTotal=0;
 minMaxBPM();*/
-/*for (let i = 0; i < 10; i++) {
-    health({steps:100, bpm:100});
-}*/
+/*var avTime = 0;
+for (let i = 0; i < 1000; i++) {
+    let t = Date.now();
+    //draw();
+    health({steps:100, bpm:120});
+    avTime += Date.now()-t;
+}
+console.log(avTime/1000.0);*/
+// DRAW:    9.99; 9.73; 9.76
+// HEALTH: 10.84; 11.53; 11.71   11.735
 /////////////////////////////////
 
 draw();
