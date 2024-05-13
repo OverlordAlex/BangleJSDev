@@ -12,10 +12,10 @@ require("Storage").write("scrolltime.info",{
 "src":"scrolltime.app.js"
 });*/
 
+// TODO: write arrays
 // TODO: fix resting BPM on left
-// TODO: minimize bytes with 1char globals
+// TODO: minimize bytes with 1char globals (incl Graphics)
 // TODO jit/compile
-// TODO: storage.save 
 
 const heartImg = {
   width : 15, height : 15, bpp : 4,
@@ -76,20 +76,49 @@ Bangle.on('swipe', (directionLR, directionUD) => {
     }
 });
 
-var bpm = new Uint8Array(24);
-var bpmI = 0;
+/*require("Storage").write("scroll.bpm.data", new Uint8Array(24));
+require("Storage").write("scroll.steps.data", new Uint16Array(24));*/
+/*require("Storage").writeJSON("scrolltime.data", {
+    bpm: new Uint8Array(24),
+    steps: new Uint16Array(24),
+    bpmI : 0,
+    bpmAvg : 0,
+    stepsI : 0,
+    stepTotal : 0,
+    stepCalDay : 0,
+    bpmCalDay : 0,
+});*/
+
+storedVals = require("Storage").readJSON("scrolltime.data", true);
+var bpm = storedVals.bpm;
+var steps = storedVals.steps;
+var bpmI = storedVals.bpmI;
+var bpmAvg = storedVals.bpmAvg;
+var stepsI = storedVals.stepsI;
+var stepTotal = storedVals.stepTotal;
+var stepCalDay = storedVals.stepCalDay;
+var bpmCalDay = storedVals.bpmCalDay;
+
 var bpmMax = -1;
 var bpmMaxIndex = 23;
 var bpmMin = 200;
 var bpmMinIndex = 23;
-var bpmAvg= 60;
+minMaxBPM();
 
-var steps = new Uint16Array(24);
-var stepsI = 0;
-var stepTotal = 0;
-
-var stepCalDay = 0;
-var bpmCalDay = 0;
+let store = function() {
+    /*require("Storage").write("scroll.bpm.data", bpm);
+    require("Storage").write("scroll.steps.data", steps);*/
+    require("Storage").writeJSON("scrolltime.data", {
+        bpm : bpm,
+        steps: steps,
+        bpmI : bpmI,
+        bpmAvg : bpmAvg,
+        stepsI : stepsI,
+        stepTotal : stepTotal,
+        stepCalDay : stepCalDay,
+        bpmCalDay : bpmCalDay,
+    });
+};
 
 /**
  * When the old min/max value has slid out of the window then we need to look at the entire history to find the new one.
@@ -120,7 +149,7 @@ let mid = function() {
     stepCalDay = 0;
     bpmCalDay = 0;
 };
-mid();
+mid(); // TODO should not be necessary!
 Bangle.on('midnight', mid);
 
 let health = function(info) {
@@ -272,6 +301,7 @@ Bangle.on('lock', (locked, reason) => {
         updateL();
         updateR();
         draw();
+        store();
     }
 });
 
@@ -285,17 +315,24 @@ minMaxBPM();*/
 for (let i = 0; i < 100; i++) {
     let t = Date.now();
     //draw();
-    health({steps:i*3, bpm:i});
+    health({steps:, bpm:0});
     //avTime += process.memory(true).usage;
     avTime += Date.now()-t;
 }
-console.log(avTime/100.0);
+console.log(avTime/100.0);*/
 // DRAW:    9.99; 9.73; 9.76                    10.16  9.83  9.94
 // HEALTH: 10.84; 11.53; 11.71   11.735         11     10.26  10.06
 // USAGE 7858  // 3763 (with gc)                8259 // 3765
 /////////////////////////////////
+/*bpm[0] = 1;
+console.log(bpm);
+health({steps:321, bpm:48});
+console.log(bpm);
+store();*/
+
+
 updateL();
-updateR();*/
+updateR();
 
 draw();
 Bangle.setUI("clock");
