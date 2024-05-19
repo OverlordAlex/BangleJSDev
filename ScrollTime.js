@@ -12,6 +12,7 @@ require("Storage").write("scrolltime.info",{
 "src":"scrolltime.app.js"
 });*/
 
+// TODO: refactor code storage
 // TODO: write to app via bluetooth
 // TODO: step counter image
 // TODO: activity -> better display?
@@ -96,6 +97,7 @@ storedVals = require("Storage").readJSON("scrolltime.data", true);
 
 var I = storedVals.I; // index into arrays
 var T = 0; // number of minutes in the last measurement
+var lastUpdated = Date.now();
 
 var steps = storedVals.steps;
 var stepTotal = storedVals.stepTotal;
@@ -164,10 +166,9 @@ let mid = function() {
 };
 Bangle.on('midnight', mid);
 
-let lastUpdated = Date.now();
 let health = function(info) {
     var now = Date.now();
-    T = Math.ceil((now - lastUpdated) / 1000);
+    T = Math.ceil((now - lastUpdated) / 60000); // ms -> minutes
     lastUpdated = now;
 
     var stepPerMin = info.steps / T;
@@ -364,11 +365,11 @@ health({steps:321, bpm:48});
 console.log(bpm);
 store();*/
 
-drawL();
-drawR();
+/*drawL();
+drawR();*/
+
+
 draw();
-
-
 Bangle.setUI("clock");
 /*setInterval(_ => {
     draw();
