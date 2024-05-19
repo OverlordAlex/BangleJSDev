@@ -12,8 +12,11 @@ require("Storage").write("scrolltime.info",{
 "src":"scrolltime.app.js"
 });*/
 
-// TODO: write arrays
-// TODO: fix resting BPM on left
+// TODO: write to app via bluetooth
+// TODO: step counter image
+// TODO: activity -> better display?
+// TODO: activity -> sleep / sleep phases?
+// TODO: write arrays instead of objects? hm - also write rounded values?
 // TODO: minimize bytes with 1char globals (incl Graphics)
 // TODO jit/compile
 
@@ -28,6 +31,8 @@ const rScreen = Graphics.createArrayBuffer(176, 176, 4, {msb:true});
 
 const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+let now = new Date();
+var date = days[now.getDay()] + "\n" + now.getDate() + "\n" + months[now.getMonth()] + "\n" + now.getFullYear();
 
 let update = function(scrollPosition) {
     let viewPortX = scrollPosition * -1;
@@ -76,45 +81,53 @@ Bangle.on('swipe', (directionLR, directionUD) => {
     }
 });
 
-/*require("Storage").write("scroll.bpm.data", new Uint8Array(24));
-require("Storage").write("scroll.steps.data", new Uint16Array(24));*/
 /*require("Storage").writeJSON("scrolltime.data", {
     bpm: new Uint8Array(24),
     steps: new Uint16Array(24),
-    bpmI : 0,
+    I : 0,
     bpmAvg : 0,
-    stepsI : 0,
     stepTotal : 0,
     stepCalDay : 0,
     bpmCalDay : 0,
+    resting: 0,
 });*/
 
 storedVals = require("Storage").readJSON("scrolltime.data", true);
-var bpm = storedVals.bpm;
-var steps = storedVals.steps;
-var bpmI = storedVals.bpmI;
-var bpmAvg = storedVals.bpmAvg;
-var stepsI = storedVals.stepsI;
-var stepTotal = storedVals.stepTotal;
-var stepCalDay = storedVals.stepCalDay;
-var bpmCalDay = storedVals.bpmCalDay;
 
+var I = storedVals.I; // index into arrays
+var T = 0; // number of minutes in the last measurement
+
+var steps = storedVals.steps;
+var stepTotal = storedVals.stepTotal;
+
+var bpm = storedVals.bpm;
+var bpmAvg = storedVals.bpmAvg;
+
+var bpmResting = storedVals.resting;
+var setResting = true; // TODO: disable when possible
 var bpmMax = -1;
 var bpmMaxIndex = 23;
 var bpmMin = 200;
 var bpmMinIndex = 23;
+
+var prevAct = new Date();
+var activity = new Uint8Array(24);
+var stepCalDay = storedVals.stepCalDay;
+var bpmCalDay = storedVals.bpmCalDay;
+
 minMaxBPM();
 
 let store = function() {
-    /*require("Storage").write("scroll.bpm.data", bpm);
-    require("Storage").write("scroll.steps.data", steps);*/
     require("Storage").writeJSON("scrolltime.data", {
-        bpm : bpm,
+        I : I,
+
         steps: steps,
-        bpmI : bpmI,
-        bpmAvg : bpmAvg,
-        stepsI : stepsI,
         stepTotal : stepTotal,
+
+        bpm : bpm,
+        bpmAvg : bpmAvg,
+        resting : bpmResting,
+
         stepCalDay : stepCalDay,
         bpmCalDay : bpmCalDay,
     });
@@ -141,57 +154,68 @@ function minMaxBPM() {
     }
 }
 
-var date = "";
 let mid = function() {
     let now = new Date();
     date = days[now.getDay()] + "\n" + now.getDate() + "\n" + months[now.getMonth()] + "\n" + now.getFullYear();
     stepTotal = 0;
     stepCalDay = 0;
     bpmCalDay = 0;
+    setResting = true;
 };
-mid(); // TODO should not be necessary!
 Bangle.on('midnight', mid);
 
+let lastUpdated = Date.now();
 let health = function(info) {
-    stepsI = (stepsI + 1) % 24;
-    steps[stepsI] = info.steps;
-    stepTotal += info.steps;
+    var now = Date.now();
+    T = Math.ceil((now - lastUpdated) / 1000);
+    lastUpdated = now;
 
-    // TODO better??
-    if (info.steps > 300) {
+    var stepPerMin = info.steps / T;
+    if (stepPerMin > 120) {
         // assume METS 3.5
-        stepCalDay += 18.375;
-    } else if (info.steps > 200) {
+        stepCalDay += T * 6.125;
+    } else if (stepPerMin > 80) {
         // assume METS 3 -- https://bjsm.bmj.com/content/52/12/776
-        stepCalDay += 15.75;
-    } else if (info.steps > 50) {
+        stepCalDay += T * 5.25;
+    } else if (stepPerMin > 50) {
         // assume METS 2
-        stepCalDay += 10.5;
+        stepCalDay += T * 3.5;
     } else {
-        stepCalDay += 5.25;
+        stepCalDay += T * 1.75;
     }
     // https://www.omnicalculator.com/sports/calories-burned-by-heart-rate
-    bpmCalDay += (1.8927 * info.bpm - 85.6824) / 4.184;
+    bpmCalDay += T * (0.6309 * info.bpm - 28.5608) / 4.184;
 
     // record the new value, and update the sliding min/max indexes accordingly
-    bpmI = (bpmI + 1) % 24;
+    I = (I + 1) % 24;
     bpmAvg = (info.bpm + bpmAvg * 24) / 25;
-    bpm[bpmI] = info.bpm;
+    if (setResting || bpmAvg < bpmResting) {
+        setResting = false;
+        bpmResting = bpmAvg;
+    }
 
-    //bpmMinIndex--;
-    //bpmMaxIndex--;
+    bpm[I] = info.bpm;
+    steps[I] = info.steps;
+    stepTotal += info.steps;
+    if (prevAct > info.movement) {
+        activity[I] = (info.movement + 255) - prevAct;
+    } else {
+        activity[I] = info.movement - prevAct;
+    }
+    prevAct = info.movement;
+
     // if the old min/max have exited the window then they are older than 8 hours
-    if (bpmMinIndex == bpmI || bpmMaxIndex == bpmI) {
+    if (bpmMinIndex == I || bpmMaxIndex == I) {
         minMaxBPM();
     } else if (bpmMin > info.bpm && info.bpm > 0) {
         // guard against 0 readings updating the min
         // also do a simple cache update if newest reading is a new minimum
         bpmMin = info.bpm;
-        bpmMinIndex = bpmI;
+        bpmMinIndex = I;
     } else if (bpmMax < info.bpm) {
         // similarly do a simple cache update if newest reading is a new maximum
         bpmMax = info.bpm;
-        bpmMaxIndex = bpmI;
+        bpmMaxIndex = I;
     }
 
     draw();
@@ -209,11 +233,11 @@ Bangle.on('charging', (charging) => {
 let updateC = function() {
     cScreen.clear(true);
     let bpmScreen = Graphics.createArrayBuffer(32, 156, 4, {msb:true});
-    graph.drawBar(bpmScreen.setRotation(1, 1).setColor(1, 0, 0), bpm.slice(bpmI + 1, 24).concat(bpm.slice(0, bpmI + 1)), {
+    graph.drawBar(bpmScreen.setRotation(1, 1).setColor(1, 0, 0), bpm.slice(I + 1, 24).concat(bpm.slice(0, I + 1)), {
         miny: bpmMin - 10,
         maxy: bpmMax + 10
     });
-    cScreen.drawImage(bpmScreen, 0, 20).setColor(0, 1, 1).setFont("6x15").drawString(bpm[bpmI], 5, 5);
+    cScreen.drawImage(bpmScreen, 0, 20).setColor(0, 1, 1).setFont("6x15").drawString(bpm[I], 5, 5);
 
     let now = new Date();
     // example: "12:54"
@@ -230,28 +254,33 @@ let updateC = function() {
         .setColor(0, 1, 1)
         .setFont("Vector", 15)
         .setFontAlign(0, 1, 0)
-        .drawString(batteryString, 90, 174);
+        .drawString(batteryString, 58, 174)
+        .drawString(T + "m", 118, 174);
 
     let stepScreen = Graphics.createArrayBuffer(32, 156, 4, {msb:true});
-    graph.drawBar(stepScreen.setRotation(3).setColor(0, 1, 0), steps.slice(stepsI + 1, 24).concat(steps.slice(0, stepsI + 1)), {
+    graph.drawBar(stepScreen.setRotation(3).setColor(0, 1, 0), steps.slice(I + 1, 24).concat(steps.slice(0, I + 1)), {
         miny: 20,
         maxy: 750
     });
-    cScreen.drawImage(stepScreen, 144, 20).setFont("6x15").setFontAlign(1, -1, 0).setColor(0, 1, 1).drawString(steps[stepsI], 171, 5);
+    cScreen.drawImage(stepScreen, 144, 20).setFont("6x15").setFontAlign(1, -1, 0).setColor(0, 1, 1).drawString(steps[I], 171, 5);
 };
 
-let updateL = function() {
+let drawL = function() {
     lScreen.clear(true);
     let bpmScreen = Graphics.createArrayBuffer(32, 156, 4, {msb:true});
-    let bpmGraph = graph.drawBar(bpmScreen.setRotation(3).setColor(1, 0, 0), bpm.slice(bpmI + 1, 24).concat(bpm.slice(0, bpmI + 1)), {
+    let bpmGraph = graph.drawBar(bpmScreen.setRotation(3).setColor(1, 0, 0), bpm.slice(I + 1, 24).concat(bpm.slice(0, I + 1)), {
         miny: 45,
         maxy: 180
+    });
+    graph.drawLine(bpmScreen.setRotation(3).setColor(0, 0, 1), activity.slice(I + 1, 24).concat(activity.slice(0, I + 1)), {
+        miny: 0,
+        maxy: 255
     });
     lScreen.drawImage(bpmScreen, 144, 20).drawImage(heartImg, 158, 5);
 
     lScreen.setFontAlign(1, 0, 0).setFont("6x15");
     for (let i = 1; i < 24; i += 3) {
-        val = bpm[(i + bpmI) % 24];
+        val = bpm[(i + I) % 24];
         lScreen.setColor(1, 1, 1);
         if (val >= 120) lScreen.setColor(1, 1, 0);
         lScreen.drawString(val, 139, 176 - bpmGraph.getx(i));
@@ -261,21 +290,25 @@ let updateL = function() {
     lScreen.setColor(1, 1, 1).setFontAlign(-1, -1, 0).drawString(bpmMax, 35, 141).drawString(bpmMin, 35, 156);
 
     lScreen.setFont("Vector", 35).drawString(bpmAvg.toFixed(1), 8, 8);
-    //lScreen.setFont("Vector", 25).setColor(0, 1, 0).drawString(bpmRest.toFixed(1), 8, 45);
+    lScreen.setFont("Vector", 25).setColor(0, 1, 0).drawString(bpmResting.toFixed(1), 8, 45);
 };
 
-let updateR = function() {
+let drawR = function() {
     rScreen.clear(true);
     let stepScreen = Graphics.createArrayBuffer(32, 156, 4, {msb:true});
-    let stepGraph = graph.drawBar(stepScreen.setRotation(1, 1).setColor(0, 1, 0), steps.slice(stepsI + 1, 24).concat(steps.slice(0, stepsI + 1)), {
+    let stepGraph = graph.drawBar(stepScreen.setRotation(1, 1).setColor(0, 1, 0), steps.slice(I + 1, 24).concat(steps.slice(0, I + 1)), {
         miny: 20,
         maxy: 750
     });
-    rScreen.drawImage(stepScreen, 0, 20).setColor(0, 1, 1).setFont("6x15").drawString(steps[stepsI], 5, 5);
+    graph.drawLine(stepScreen.setColor(0, 0, 1), activity.slice(I + 1, 24).concat(activity.slice(0, I + 1)), {
+        miny: 0,
+        maxy: 255
+    });
+    rScreen.drawImage(stepScreen, 0, 20).setColor(0, 1, 1).setFont("6x15").drawString(steps[I], 5, 5);
 
     rScreen.setFontAlign(-1, 0, 0).setFont("6x15");
     for (let i = 1; i < 24; i += 3) {
-        val = steps[(i + stepsI) % 24];
+        val = steps[(i + I) % 24];
         rScreen.setColor(1, 1, 1);
         if (val >= 250) rScreen.setColor(1, 1, 0);
         rScreen.drawString(val, 37, 176 - stepGraph.getx(i));
@@ -298,8 +331,8 @@ let draw = function() {
 // draw on unlock
 Bangle.on('lock', (locked, reason) => {
     if (!locked) {
-        updateL();
-        updateR();
+        drawL();
+        drawR();
         draw();
         store();
     }
@@ -311,15 +344,16 @@ Bangle.on('lock', (locked, reason) => {
 bpmAvg = bpm.reduce((accumulator, currentValue) => accumulator + currentValue/24, 0);
 stepTotal=0;
 minMaxBPM();*/
-/*var avTime = 0;
+/*mid();
+//var avTime = 0;
 for (let i = 0; i < 100; i++) {
-    let t = Date.now();
+    //let t = Date.now();
     //draw();
-    health({steps:, bpm:0});
+    health({steps: i, bpm:i, movement:Math.floor(Math.random()*255)});
     //avTime += process.memory(true).usage;
-    avTime += Date.now()-t;
-}
-console.log(avTime/100.0);*/
+    //avTime += Date.now()-t;
+}*/
+//console.log(avTime/100.0);
 // DRAW:    9.99; 9.73; 9.76                    10.16  9.83  9.94
 // HEALTH: 10.84; 11.53; 11.71   11.735         11     10.26  10.06
 // USAGE 7858  // 3763 (with gc)                8259 // 3765
@@ -330,11 +364,11 @@ health({steps:321, bpm:48});
 console.log(bpm);
 store();*/
 
-
-updateL();
-updateR();
-
+drawL();
+drawR();
 draw();
+
+
 Bangle.setUI("clock");
 /*setInterval(_ => {
     draw();
