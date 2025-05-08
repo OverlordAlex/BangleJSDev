@@ -168,7 +168,7 @@ Bangle.on('midnight', mid);
 
 let health = function(info) {
     var now = Date.now();
-    T = Math.ceil((now - lastUpdated) / 60000); // ms -> minutes
+    T = Math.floor((now - lastUpdated) / 60000); // ms -> minutes
     lastUpdated = now;
 
     var stepPerMin = info.steps / T;
@@ -227,7 +227,7 @@ Bangle.on('health', (info) => health(info));
 var charge = false;
 Bangle.on('charging', (charging) => {
     charge = charging;
-    if (charging) Bangle.buzz(50, 1);
+    if (charging) Bangle.buzz(100, 1);
     update(0);
 });
 
@@ -256,7 +256,7 @@ let updateC = function() {
         .setFont("Vector", 15)
         .setFontAlign(0, 1, 0)
         .drawString(batteryString, 58, 174)
-        .drawString(T + "m", 118, 174);
+        .drawString(E.getTemperature(), 118, 174);
 
     let stepScreen = Graphics.createArrayBuffer(32, 156, 4, {msb:true});
     graph.drawBar(stepScreen.setRotation(3).setColor(0, 1, 0), steps.slice(I + 1, 24).concat(steps.slice(0, I + 1)), {
