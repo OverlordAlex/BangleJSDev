@@ -30,9 +30,10 @@ Animated - green characters fall, leaving behind the time in cyan.
 
 First watch ever created, and the performance is terrible. This was never seriously deployyed.
 
-[What the display shows by default](matrixFinished.png)
+![What happens when the time is refreshed](matrixInProgress.png)
+![What the display shows by default](matrixFinished.png)
 
-[What happens when the time is refreshed](matrixInProgress.png
+
 
 ## Useful Links for Development
 // REFERENCE MANUAL
