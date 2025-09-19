@@ -1,8 +1,26 @@
 Repository containing watch faces, widgets, and apps for the BangleJS 2
 
+# ScrollTime.js
+
+A three-panel display 
+
+- left panel shows heartrate data. 
+- right panel shows stepcount and exercise data
+- center panel combines the data and shows time information
+
+Called scrolltime as you have to scroll to the left or to the right to view more information
+
+Heartrate - Left | Time and Date - Center | Steps and calories - Right
+:-------------------------:|:-------------------------:|:-------------------------:
+![Heartrate - left screen](scrollTime_leftHRT.jpg) |![Time and Date - center screen](scrollTime_mainScreen.jpg)|![Steps and calories - right screen](scrollTime_rightStepTracking.jpg)
+
+I've been using this watch for several months and am generally happy, although still plenty of TODOs.
+
 # DevTime.js
 
-![devtime.js watchface screenshot from emulator](https://github.com/OverlordAlex/BangleJSDev/blob/main/paradiseToml.png)
+Displays information in a TOML format.
+
+![devtime.js watchface screenshot from emulator](devTime.png)
 
 Static - a syntax-highlighted TOML formatted file which is actually the watch data
 
@@ -10,7 +28,13 @@ Static - a syntax-highlighted TOML formatted file which is actually the watch da
 
 Animated - green characters fall, leaving behind the time in cyan.
 
-## Useful Links
+First watch ever created, and the performance is terrible. This was never seriously deployyed.
+
+[What the display shows by default](matrixFinished.png)
+
+[What happens when the time is refreshed](matrixInProgress.png
+
+## Useful Links for Development
 // REFERENCE MANUAL
 https://www.espruino.com/Reference
 
