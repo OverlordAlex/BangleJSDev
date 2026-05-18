@@ -1,0 +1,29 @@
+
+2026-05-14 11:29:58.935 32092-3313  BleSyncService          com...bugnotafeature.scrolltimesync  D  Connecting to D4:82:0D:21:BF:E6
+2026-05-14 11:29:58.938 32092-3313  BluetoothGatt           com...bugnotafeature.scrolltimesync  D  BluetoothGatt() UUID=52c08af1-5b1f-46d4-a1b4-b2ac25ca66c1
+2026-05-14 11:29:58.942 32092-3245  BluetoothGatt           com...bugnotafeature.scrolltimesync  D  onClientRegistered(0)
+2026-05-14 11:29:59.278 32092-3245  BluetoothGatt           com...bugnotafeature.scrolltimesync  D  onClientConnectionState() - status=0 connected=true device=XX:XX:XX:XX:BF:E6
+2026-05-14 11:29:59.279 32092-3245  BleSyncService          com...bugnotafeature.scrolltimesync  D  Connected to GATT server
+2026-05-14 11:29:59.279 32092-3245  BluetoothGatt           com...bugnotafeature.scrolltimesync  D  discoverServices() - device: XX:XX:XX:XX:BF:E6
+2026-05-14 11:29:59.303 32092-3245  BluetoothGatt           com...bugnotafeature.scrolltimesync  D  onSearchComplete(XX:XX:XX:XX:BF:E6, _, 0)
+2026-05-14 11:29:59.304 32092-3245  BluetoothGatt           com...bugnotafeature.scrolltimesync  D  setCharacteristicNotification() - uuid: 6e400003-b5a3-f393-e0a9-e50e24dcca9e enable: true
+2026-05-14 11:29:59.425 32092-3245  BleSyncService          com...bugnotafeature.scrolltimesync  D  Sending SYNC command
+2026-05-14 11:29:59.534 32092-3245  BleSyncService          com...bugnotafeature.scrolltimesync  D  BLE RX chunk (16 bytes): 00 00 00 00 00 00 5C 02 5C 02 00 00 00 00 00 00
+2026-05-14 11:29:59.534 32092-3245  BleSyncService          com...bugnotafeature.scrolltimesync  D  Buffer total: 16 bytes
+2026-05-14 11:29:59.535 32092-3245  BleSyncService          com...bugnotafeature.scrolltimesync  D  Header bytes: 00 00 00 00 00 00 5C 02 5C 02 00 00 00 00 00 00
+2026-05-14 11:29:59.535 32092-3245  BleSyncService          com...bugnotafeature.scrolltimesync  D  Expected payload size: 16 (histLen=0)
+2026-05-14 11:29:59.536 32092-3313  SyncProtocol            com...bugnotafeature.scrolltimesync  D  Raw header fields: histStart=0 histLen=0 battery=0 bpmAvgX10=604 bpmRestingX10=604 stepCalDay=0 bpmCalDay=0 sleepTotal=0
+2026-05-14 11:29:59.537 32092-3313  SyncProtocol            com...bugnotafeature.scrolltimesync  D  Parsed header: avgBpm=60.4 restingBpm=60.4 stepCal=0 bpmCal=0 sleep=0min battery=0%
+2026-05-14 11:29:59.547 32092-3313  BleSyncService          com...bugnotafeature.scrolltimesync  D  Sending time correction: TIME:1778750999
+2026-05-14 11:29:59.557 32092-3245  BluetoothGatt           com...bugnotafeature.scrolltimesync  D  onConnectionUpdated() - device=XX:XX:XX:XX:BF:E6 interval=9 latency=0 timeout=400 status=0
+2026-05-14 11:29:59.630 32092-3245  BleSyncService          com...bugnotafeature.scrolltimesync  D  BLE RX chunk (18 bytes): 4F 4B 0A 3C 2D 20 4C 6F 6F 70 62 61 63 6B 41 0D 0A 3E
+2026-05-14 11:29:59.630 32092-3245  BleSyncService          com...bugnotafeature.scrolltimesync  D  Buffer total: 34 bytes
+2026-05-14 11:29:59.631 32092-3313  SyncProtocol            com...bugnotafeature.scrolltimesync  D  Raw header fields: histStart=0 histLen=0 battery=0 bpmAvgX10=604 bpmRestingX10=604 stepCalDay=0 bpmCalDay=0 sleepTotal=0
+2026-05-14 11:29:59.632 32092-3313  SyncProtocol            com...bugnotafeature.scrolltimesync  D  Parsed header: avgBpm=60.4 restingBpm=60.4 stepCal=0 bpmCal=0 sleep=0min battery=0%
+2026-05-14 11:29:59.638 32092-3313  BleSyncService          com...bugnotafeature.scrolltimesync  D  Sending time correction: TIME:1778750999
+2026-05-14 11:29:59.673 32092-3245  BleSyncService          com...bugnotafeature.scrolltimesync  D  BLE RX chunk (20 bytes): 54 49 4D 45 3A 31 37 37 38 37 35 30 39 39 39 0D 0A 55 6E 63
+2026-05-14 11:29:59.673 32092-3245  BleSyncService          com...bugnotafeature.scrolltimesync  D  Buffer total: 54 bytes
+2026-05-14 11:29:59.674 32092-32330 SyncProtocol            com...bugnotafeature.scrolltimesync  D  Raw header fields: histStart=0 histLen=0 battery=0 bpmAvgX10=604 bpmRestingX10=604 stepCalDay=0 bpmCalDay=0 sleepTotal=0
+2026-05-14 11:29:59.674 32092-32330 SyncProtocol            com...bugnotafeature.scrolltimesync  D  Parsed header: avgBpm=60.4 restingBpm=60.4 stepCal=0 bpmCal=0 sleep=0min battery=0%
+2026-05-14 11:29:59.683 32092-3245  BleSyncService          com...bugnotafeature.scrolltimesync  D  BLE RX chunk (20 bytes): 61 75 67 68 74 20 52 65 66 65 72 65 6E 63 65 45 72 72 6F 72
+2026-05-14 11:29:59.683 32092-3245  BleSyncService          com...bugnotafeature.scrolltimesync  D  Buffer total: 74 byt

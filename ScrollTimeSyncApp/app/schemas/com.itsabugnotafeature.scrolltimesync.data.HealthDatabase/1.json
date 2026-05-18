@@ -1,0 +1,259 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "df445fbbd63600d28b1950bad3664420",
+    "entities": [
+      {
+        "tableName": "health_records",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `timestamp` INTEGER NOT NULL, `bpm` INTEGER NOT NULL, `steps` INTEGER NOT NULL, `isSleeping` INTEGER NOT NULL, `movement` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bpm",
+            "columnName": "bpm",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "steps",
+            "columnName": "steps",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isSleeping",
+            "columnName": "isSleeping",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "movement",
+            "columnName": "movement",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_health_records_timestamp",
+            "unique": true,
+            "columnNames": [
+              "timestamp"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_health_records_timestamp` ON `${TABLE_NAME}` (`timestamp`)"
+          }
+        ]
+      },
+      {
+        "tableName": "daily_summaries",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`date` TEXT NOT NULL, `avgBpm` REAL NOT NULL, `restingBpm` REAL NOT NULL, `minBpm` INTEGER NOT NULL, `maxBpm` INTEGER NOT NULL, `stepCalories` INTEGER NOT NULL, `bpmCalories` INTEGER NOT NULL, `totalSleepMinutes` INTEGER NOT NULL, `totalSteps` INTEGER NOT NULL, `sleepQuality` INTEGER, PRIMARY KEY(`date`))",
+        "fields": [
+          {
+            "fieldPath": "date",
+            "columnName": "date",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "avgBpm",
+            "columnName": "avgBpm",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "restingBpm",
+            "columnName": "restingBpm",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "minBpm",
+            "columnName": "minBpm",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "maxBpm",
+            "columnName": "maxBpm",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "stepCalories",
+            "columnName": "stepCalories",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bpmCalories",
+            "columnName": "bpmCalories",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalSleepMinutes",
+            "columnName": "totalSleepMinutes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalSteps",
+            "columnName": "totalSteps",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sleepQuality",
+            "columnName": "sleepQuality",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "date"
+          ]
+        }
+      },
+      {
+        "tableName": "sync_log",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `timestamp` INTEGER NOT NULL, `recordsReceived` INTEGER NOT NULL, `watchBatteryPercent` INTEGER, `status` TEXT NOT NULL, `errorMessage` TEXT)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "recordsReceived",
+            "columnName": "recordsReceived",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "watchBatteryPercent",
+            "columnName": "watchBatteryPercent",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "errorMessage",
+            "columnName": "errorMessage",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "weekly_summaries",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`weekStartDate` TEXT NOT NULL, `weekEndDate` TEXT NOT NULL, `avgRestingBpm` REAL NOT NULL, `restingBpmTrend` REAL NOT NULL, `totalSteps` INTEGER NOT NULL, `avgSleepMinutes` INTEGER NOT NULL, `totalActiveCalories` INTEGER NOT NULL, `avgSleepQuality` INTEGER, `insights` TEXT, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`weekStartDate`))",
+        "fields": [
+          {
+            "fieldPath": "weekStartDate",
+            "columnName": "weekStartDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "weekEndDate",
+            "columnName": "weekEndDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "avgRestingBpm",
+            "columnName": "avgRestingBpm",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "restingBpmTrend",
+            "columnName": "restingBpmTrend",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalSteps",
+            "columnName": "totalSteps",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "avgSleepMinutes",
+            "columnName": "avgSleepMinutes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalActiveCalories",
+            "columnName": "totalActiveCalories",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "avgSleepQuality",
+            "columnName": "avgSleepQuality",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "insights",
+            "columnName": "insights",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "weekStartDate"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'df445fbbd63600d28b1950bad3664420')"
+    ]
+  }
+}

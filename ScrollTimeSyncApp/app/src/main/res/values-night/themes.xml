@@ -1,0 +1,6 @@
+<resources>
+    <style name="Theme.ScrollTimeSync" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowSplashScreenBackground">#111418</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+    </style>
+</resources>
