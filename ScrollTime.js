@@ -33,7 +33,7 @@ const rScreen = Graphics.createArrayBuffer(176, 176, 4, {msb:true});
 const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 let now = new Date();
-var date = days[now.getDay()] + "\n" + now.getDate() + "\n" + months[now.getMonth()] + "\n" + now.getFullYear();
+let date = days[now.getDay()] + "\n" + now.getDate() + "\n" + months[now.getMonth()] + "\n" + now.getFullYear();
 
 let update = function(scrollPosition) {
     let viewPortX = scrollPosition * -1;
@@ -46,7 +46,7 @@ let update = function(scrollPosition) {
     }
 };
 
-var screen = 0;
+let screen = 0;
 
 let scroll = function(direction, speed) {
     //scroll left moves to the screen on the right, and vice versa
@@ -91,34 +91,52 @@ Bangle.on('swipe', (directionLR, directionUD) => {
     stepCalDay : 0,
     bpmCalDay : 0,
     resting: 0,
+    sleep: new Uint8Array(24),
+    sleepTotal: 0,
+    sleepCount: 0,
+    asleep: 0,
+    sleepResetDone: 0,
+    hist: new Uint8Array(600),
+    histLen: 0,
+    histStart: 0,
 });*/
 
-storedVals = require("Storage").readJSON("scrolltime.data", true);
+let storedVals = require("Storage").readJSON("scrolltime.data", true);
 
-var I = storedVals.I; // index into arrays
-var T = 0; // number of minutes in the last measurement
-var lastUpdated = Date.now();
+let I = storedVals.I; // index into arrays
+let T = 10; // health event interval in minutes
+let steps = storedVals.steps;
+let stepTotal = storedVals.stepTotal;
 
-var steps = storedVals.steps;
-var stepTotal = storedVals.stepTotal;
+let bpm = storedVals.bpm;
+let bpmAvg = storedVals.bpmAvg;
 
-var bpm = storedVals.bpm;
-var bpmAvg = storedVals.bpmAvg;
+let bpmResting = storedVals.resting;
+let setResting = true; // TODO: disable when possible
+let bpmMax = -1;
+let bpmMaxIndex = 23;
+let bpmMin = 200;
+let bpmMinIndex = 23;
 
-var bpmResting = storedVals.resting;
-var setResting = true; // TODO: disable when possible
-var bpmMax = -1;
-var bpmMaxIndex = 23;
-var bpmMin = 200;
-var bpmMinIndex = 23;
+let prevAct = new Date();
+let activity = new Uint8Array(24);
+let stepCalDay = storedVals.stepCalDay;
+let bpmCalDay = storedVals.bpmCalDay;
 
-var prevAct = new Date();
-var activity = new Uint8Array(24);
-var stepCalDay = storedVals.stepCalDay;
-var bpmCalDay = storedVals.bpmCalDay;
+let sleep = storedVals.sleep || new Uint8Array(24);
+let sleepTotal = storedVals.sleepTotal || 0;
+let sleepCount = storedVals.sleepCount || 0;
+let asleep = storedVals.asleep || 0;
+let sleepResetDone = storedVals.sleepResetDone || 0;
 
-minMaxBPM();
+let hist = storedVals.hist || new Uint8Array(600);
+let histLen = storedVals.histLen || 0;
+let histStart = storedVals.histStart || Math.floor(now / 1000);
 
+// Flash wear: ~10 unlocks/day x ~2.5KB writeJSON = 25KB/day.
+// nRF52840: 10,000 erase cycles per 4KB page, ~500KB storage.
+// Compaction every ~20 days, ~18 erases/page/year → ~555 year lifespan.
+// No flash health API on nRF52840.
 let store = function() {
     require("Storage").writeJSON("scrolltime.data", {
         I : I,
@@ -132,6 +150,16 @@ let store = function() {
 
         stepCalDay : stepCalDay,
         bpmCalDay : bpmCalDay,
+
+        sleep : sleep,
+        sleepTotal : sleepTotal,
+        sleepCount : sleepCount,
+        asleep : asleep,
+        sleepResetDone : sleepResetDone,
+
+        hist : hist,
+        histLen : histLen,
+        histStart : histStart,
     });
 };
 
@@ -139,12 +167,13 @@ let store = function() {
  * When the old min/max value has slid out of the window then we need to look at the entire history to find the new one.
  * This effective updates the min/max cached values without having to recalculate on every reading.
  */
+// Espruino crashes if this is `let minMaxBPM = function()` even when defined before use
 function minMaxBPM() {
     bpmMin = 220;
     bpmMax = 0;
 
     for (let i = 0; i < 24; i++) {
-        measurement = bpm[i];
+        let measurement = bpm[i];
         if (measurement > 0 && bpmMin > measurement) {
             bpmMin = measurement;
             bpmMinIndex = i;
@@ -156,22 +185,51 @@ function minMaxBPM() {
     }
 }
 
-let mid = function() {
-    let now = new Date();
-    date = days[now.getDay()] + "\n" + now.getDate() + "\n" + months[now.getMonth()] + "\n" + now.getFullYear();
+minMaxBPM();
+
+let syncTimeout = null;
+let syncBattery = E.getBattery();
+
+// Redirect REPL away from BLE so the sync data handler gets clean binary I/O.
+// force=true prevents Espruino from auto-switching the console back on connection state changes.
+// NOTE: The Espruino Web IDE holds a BLE connection open. Disconnect the IDE before testing sync,
+// otherwise the IDE's connection keeps the REPL on Bluetooth and the sync handler never fires cleanly.
+NRF.on('connect', function() {
+    LoopbackA.setConsole(true);
+});
+
+let doMidnightReset = function() {
     stepTotal = 0;
     stepCalDay = 0;
     bpmCalDay = 0;
     setResting = true;
+    hist.fill(0);
+    histLen = 0;
+};
+
+let endSync = function() {
+    if (syncTimeout) { clearTimeout(syncTimeout); syncTimeout = null; }
+    setTimeout(() => NRF.sleep(), 2000);
+};
+
+let mid = function() {
+    let now = new Date();
+    date = days[now.getDay()] + "\n" + now.getDate() + "\n" + months[now.getMonth()] + "\n" + now.getFullYear();
+    sleepResetDone = 0;
+
+    syncBattery = E.getBattery();
+    NRF.wake();
+    syncTimeout = setTimeout(() => {
+        doMidnightReset();
+        endSync();
+        store();
+    }, 3600000);
 };
 Bangle.on('midnight', mid);
 
 let health = function(info) {
-    var now = Date.now();
-    T = Math.floor((now - lastUpdated) / 60000); // ms -> minutes
-    lastUpdated = now;
-
-    var stepPerMin = info.steps / T;
+    "ram";
+    let stepPerMin = info.steps / T;
     if (stepPerMin > 120) {
         // assume METS 3.5
         stepCalDay += T * 6.125;
@@ -205,6 +263,49 @@ let health = function(info) {
     }
     prevAct = info.movement;
 
+    let h = new Date().getHours();
+    // Sleep detection: low steps and HR near resting (no movement check - too noisy)
+    let sleepLike = info.steps < 5 && info.bpm > 0
+        && info.bpm < bpmResting + 5;
+
+    if (h >= 18 && !sleepResetDone && info.steps > 30) {
+        sleepTotal = 0;
+        sleepResetDone = 1;
+        asleep = 0;
+        sleepCount = 0;
+    }
+
+    sleep[I] = 0;
+    if (sleepLike) {
+        sleepCount++;
+        if (asleep || sleepCount >= ((h >= 23 || h < 7) ? 2 : 3)) {
+            if (!asleep) {
+                for (let j = 1; j < sleepCount; j++) {
+                    sleep[(I - j + 24) % 24] = 1;
+                    let hOff = (histLen - j) * 4 + 1;
+                    if (hOff >= 1) hist[hOff] |= 1;
+                }
+                sleepTotal += (sleepCount - 1) * T;
+            }
+            sleep[I] = 1;
+            sleepTotal += T;
+            asleep = 1;
+        }
+    } else {
+        asleep = 0;
+        sleepCount = 0;
+    }
+
+    if (histLen < 150) {
+        if (!histLen) histStart = Math.floor(Date.now() / 1000);
+        let off = histLen * 4;
+        hist[off] = info.bpm;
+        hist[off + 1] = ((info.steps >> 8) << 1) | sleep[I];
+        hist[off + 2] = info.steps & 0xFF;
+        hist[off + 3] = activity[I] & 0xFF;
+        histLen++;
+    }
+
     // if the old min/max have exited the window then they are older than 8 hours
     if (bpmMinIndex == I || bpmMaxIndex == I) {
         minMaxBPM();
@@ -224,7 +325,30 @@ let health = function(info) {
 
 Bangle.on('health', (info) => health(info));
 
-var charge = false;
+Bluetooth.on('data', function(cmd) {
+    cmd = cmd.trim();
+    if (cmd === "SYNC") {
+        let hdr = new Uint8Array(16);
+        let ts = histStart;
+        hdr[0]=ts&0xFF; hdr[1]=(ts>>8)&0xFF; hdr[2]=(ts>>16)&0xFF; hdr[3]=(ts>>24)&0xFF;
+        hdr[4]=histLen; hdr[5]=syncBattery;
+        let a=Math.round(bpmAvg*10); hdr[6]=a&0xFF; hdr[7]=(a>>8)&0xFF;
+        let r=Math.round(bpmResting*10); hdr[8]=r&0xFF; hdr[9]=(r>>8)&0xFF;
+        let sc=Math.round(stepCalDay); hdr[10]=sc&0xFF; hdr[11]=(sc>>8)&0xFF;
+        let bc=Math.round(bpmCalDay); hdr[12]=bc&0xFF; hdr[13]=(bc>>8)&0xFF;
+        hdr[14]=sleepTotal&0xFF; hdr[15]=(sleepTotal>>8)&0xFF;
+        Bluetooth.write(hdr);
+        Bluetooth.write(hist.slice(0, histLen * 4));
+    } else if (cmd.startsWith("TIME:")) {
+        setTime(parseInt(cmd.substring(5)));
+        doMidnightReset();
+        store();
+        Bluetooth.write("OK\n");
+        endSync();
+    }
+});
+
+let charge = false;
 Bangle.on('charging', (charging) => {
     charge = charging;
     if (charging) Bangle.buzz(100, 1);
@@ -232,6 +356,7 @@ Bangle.on('charging', (charging) => {
 });
 
 let updateC = function() {
+    "ram";
     cScreen.clear(true);
     let bpmScreen = Graphics.createArrayBuffer(32, 156, 4, {msb:true});
     graph.drawBar(bpmScreen.setRotation(1, 1).setColor(1, 0, 0), bpm.slice(I + 1, 24).concat(bpm.slice(0, I + 1)), {
@@ -242,7 +367,6 @@ let updateC = function() {
 
     let now = new Date();
     // example: "12:54"
-    let hours = now.getHours(), minutes = now.getMinutes();
     let timeString = now.getHours().toString().padStart(2, 0) + ":" + now.getMinutes().toString().padStart(2, 0);
 
     cScreen.setColor(1, 1, 1).setFontAlign(0, -1, 0)
@@ -250,13 +374,13 @@ let updateC = function() {
         .setFont("Vector", 25).drawString(date, 90, 50);
 
     let batteryString = E.getBattery() + "%";
-    if (charge) batteryString = "[[[ " + batteryString + " ]]]";
+    if (charge || syncTimeout) batteryString = "[[[ " + batteryString + " ]]]";
     cScreen
         .setColor(0, 1, 1)
         .setFont("Vector", 15)
         .setFontAlign(0, 1, 0)
         .drawString(batteryString, 58, 174)
-        .drawString(E.getTemperature(), 118, 174);
+        .drawString(Math.floor(sleepTotal/60) + "h" + (sleepTotal%60) + "m", 118, 174);
 
     let stepScreen = Graphics.createArrayBuffer(32, 156, 4, {msb:true});
     graph.drawBar(stepScreen.setRotation(3).setColor(0, 1, 0), steps.slice(I + 1, 24).concat(steps.slice(0, I + 1)), {
@@ -267,8 +391,17 @@ let updateC = function() {
 };
 
 let drawL = function() {
+    "ram";
     lScreen.clear(true);
     let bpmScreen = Graphics.createArrayBuffer(32, 156, 4, {msb:true});
+    bpmScreen.setColor(0, 1, 1);
+    bpmScreen.drawLine(0, 39, 15, 39);
+    bpmScreen.drawLine(0, 78, 15, 78);
+    bpmScreen.drawLine(0, 117, 15, 117);
+    for (let n = 0; n < 24; n++) {
+        if (sleep[(n + I + 1) % 24])
+            bpmScreen.fillRect(0, n*6|0, 2, ((n+1)*6|0)+5);
+    }
     let bpmGraph = graph.drawBar(bpmScreen.setRotation(3).setColor(1, 0, 0), bpm.slice(I + 1, 24).concat(bpm.slice(0, I + 1)), {
         miny: 45,
         maxy: 180
@@ -281,7 +414,7 @@ let drawL = function() {
 
     lScreen.setFontAlign(1, 0, 0).setFont("6x15");
     for (let i = 1; i < 24; i += 3) {
-        val = bpm[(i + I) % 24];
+        let val = bpm[(i + I) % 24];
         lScreen.setColor(1, 1, 1);
         if (val >= 120) lScreen.setColor(1, 1, 0);
         lScreen.drawString(val, 139, 176 - bpmGraph.getx(i));
@@ -295,8 +428,17 @@ let drawL = function() {
 };
 
 let drawR = function() {
+    "ram";
     rScreen.clear(true);
     let stepScreen = Graphics.createArrayBuffer(32, 156, 4, {msb:true});
+    stepScreen.setColor(0, 1, 1);
+    stepScreen.drawLine(16, 39, 31, 39);
+    stepScreen.drawLine(16, 78, 31, 78);
+    stepScreen.drawLine(16, 117, 31, 117);
+    for (let n = 0; n < 24; n++) {
+        if (sleep[(n + I + 1) % 24])
+            stepScreen.fillRect(29, n*6|0, 31, ((n+1)*6|0)+5);
+    }
     let stepGraph = graph.drawBar(stepScreen.setRotation(1, 1).setColor(0, 1, 0), steps.slice(I + 1, 24).concat(steps.slice(0, I + 1)), {
         miny: 20,
         maxy: 750
@@ -309,7 +451,7 @@ let drawR = function() {
 
     rScreen.setFontAlign(-1, 0, 0).setFont("6x15");
     for (let i = 1; i < 24; i += 3) {
-        val = steps[(i + I) % 24];
+        let val = steps[(i + I) % 24];
         rScreen.setColor(1, 1, 1);
         if (val >= 250) rScreen.setColor(1, 1, 0);
         rScreen.drawString(val, 37, 176 - stepGraph.getx(i));
@@ -331,7 +473,10 @@ let draw = function() {
 
 // draw on unlock
 Bangle.on('lock', (locked, reason) => {
-    if (!locked) {
+    if (locked) {
+        require("widget_utils").hide();
+        draw()
+    } else {
         drawL();
         drawR();
         draw();
@@ -365,12 +510,13 @@ health({steps:321, bpm:48});
 console.log(bpm);
 store();*/
 
-/*drawL();
-drawR();*/
-
-
+//drawL();
+//drawR();
 draw();
 Bangle.setUI("clock");
+require("widget_utils").hide();
+
+setTimeout(() => NRF.sleep(), 60000); // sleep after 1 minute, allowing manual sync
 /*setInterval(_ => {
     draw();
 }, 60000);*/
