@@ -80,6 +80,9 @@ Bangle.on('swipe', (directionLR, directionUD) => {
     } else if (directionLR == 1) {
         scroll(-1, 2);
     }
+    if (directionUD == 1 && screen === 0) {
+        load("sporttime.app.js");
+    }
 });
 
 /*require("Storage").writeJSON("scrolltime.data", {
@@ -475,7 +478,7 @@ let draw = function() {
 Bangle.on('lock', (locked, reason) => {
     if (locked) {
         require("widget_utils").hide();
-        draw()
+        draw();
     } else {
         drawL();
         drawR();
